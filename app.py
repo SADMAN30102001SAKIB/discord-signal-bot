@@ -76,28 +76,47 @@ async def on_ready():
 
 
 # Command for Buy or Sell signals
-@bot.command(name="signal")
-async def signal(ctx, action: str, margin: float):
+# Command for Buy signal (Long)
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def b(ctx, margin: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
-    if action not in ["b", "s"]:
+    try:
+        # price = get_binance_btc_price()
+        price = 100
+        take_profit = price * 1.005  # 50% ROI calculation for buy
+        action_text = "long"
+
+        await ctx.send(format_message(action_text, price, take_profit, margin))
+    except ValueError:
         await ctx.send(
-            "❌ Invalid action. Use `!signal b {margin}` or `!signal s {margin}`."
+            "❌ Invalid margin. Please provide a valid number (e.g., `!b 1.5`)."
         )
+
+    await ctx.message.delete()
+
+
+# Command for Sell signal (Short)
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def s(ctx, margin: float):
+    if ctx.channel.name != SIGNALS_CHANNEL:
+        await ctx.send("❌ You can't use this command in this channel.")
         return
 
     try:
         # price = get_binance_btc_price()
-        # take_profit = price * (1.005 if action == "b" else 0.995)
-        # action_text = "long" if action == "b" else "short"
+        price = 100
+        take_profit = price * 0.995  # 50% ROI calculation for sell
+        action_text = "short"
 
-        # await ctx.send(format_message(action_text, price, take_profit, margin))
-        await ctx.send("Hello")
+        await ctx.send(format_message(action_text, price, take_profit, margin))
     except ValueError:
         await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!signal b 1.5`)."
+            "❌ Invalid margin. Please provide a valid number (e.g., `!s 2.0`)."
         )
 
     await ctx.message.delete()
@@ -105,6 +124,7 @@ async def signal(ctx, action: str, margin: float):
 
 # Command for setting Stop Loss
 @bot.command()
+@commands.has_permissions(administrator=True)
 async def sl(ctx, action: str, stop_loss_price: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
@@ -120,6 +140,7 @@ async def sl(ctx, action: str, stop_loss_price: float):
 
 # Command for setting Trailing Stop Loss
 @bot.command()
+@commands.has_permissions(administrator=True)
 async def tsl(ctx, action: str, stop_loss_price: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
