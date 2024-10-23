@@ -32,6 +32,15 @@ def get_binance_btc_price():
     return float(data["price"])
 
 
+@app.route("/test-binance")
+def test_binance():
+    price = get_binance_btc_price()
+    if price is not None:
+        return f"BTC price: {price}"
+    else:
+        return "Error fetching price"
+
+
 def format_message(action, price, take_profit, margin_percent):
     return (
         f"**🪙  Bitcoin**\n\n"
