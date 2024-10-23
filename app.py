@@ -27,6 +27,7 @@ def home():
 
 def get_binance_btc_price():
     try:
+        print("Fetching price...")
         response = requests.get(
             "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT"
         )
