@@ -108,8 +108,8 @@ async def s(ctx, margin: float):
         return
 
     try:
-        # price = get_binance_btc_price()
-        price = 100
+        price = get_binance_btc_price()
+        # price = 100
         take_profit = price * 0.995  # 50% ROI calculation for sell
         action_text = "short"
 
