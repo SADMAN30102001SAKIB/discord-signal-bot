@@ -79,7 +79,7 @@ async def on_ready():
 # Command for Buy signal (Long)
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def b(ctx, margin: float):
+async def buy(ctx, margin: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -92,7 +92,7 @@ async def b(ctx, margin: float):
         await ctx.send(format_message(action_text, price, take_profit, margin))
     except ValueError:
         await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!b 1.5`)."
+            "❌ Invalid margin. Please provide a valid number (e.g., `!buy 1.5`)."
         )
 
     await ctx.message.delete()
@@ -101,7 +101,7 @@ async def b(ctx, margin: float):
 # Command for Sell signal (Short)
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def s(ctx, margin: float):
+async def sell(ctx, margin: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -114,7 +114,7 @@ async def s(ctx, margin: float):
         await ctx.send(format_message(action_text, price, take_profit, margin))
     except ValueError:
         await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!s 2.0`)."
+            "❌ Invalid margin. Please provide a valid number (e.g., `!sell 2.0`)."
         )
 
     await ctx.message.delete()
