@@ -5,10 +5,14 @@ import threading
 
 import discord
 import requests
+from discord.ext import commands
 from flask import Flask
 from flask_cors import CORS
 
-TOKEN = "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ"
+TOKEN = os.getenv(
+    "DISCORD_TOKEN",
+    "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ",
+)
 BINANCE_API_URL = "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT"
 SIGNALS_CHANNEL = "signals"
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
@@ -61,17 +65,20 @@ def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
 
 intents = discord.Intents.default()
 intents.message_content = True
-client = discord.Client(intents=intents)
+# client = discord.Client(intents=intents)
+intents.guilds = True
+intents.members = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f"Logged in as {client.user}")
+    print(f"Logged in as {bot.user}")
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     if message.channel.name != SIGNALS_CHANNEL:
@@ -171,12 +178,15 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def run_discord_bot():
-    client.run(TOKEN)
-
-
-if __name__ == "__main__":
-    discord_thread = threading.Thread(target=run_discord_bot)
-    discord_thread.start()
-
+def run_flask():
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), threaded=True)
+
+
+def main():
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    asyncio.run(bot.start(TOKEN))
+
+
+main()
