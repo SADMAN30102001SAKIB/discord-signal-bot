@@ -5,16 +5,13 @@ import threading
 
 import discord
 import requests
-from discord.ext import commands
 from flask import Flask
 from flask_cors import CORS
 
-TOKEN = os.getenv(
-    "DISCORD_TOKEN",
-    "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ",
-)
-SUBSCRIBER_ROLE_ID = "1293979151266742354"
+TOKEN = "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ"
+BINANCE_API_URL = "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT"
 SIGNALS_CHANNEL = "signals"
+SUBSCRIBER_ROLE_ID = "1293979151266742354"
 
 app = Flask(__name__)
 CORS(app)
@@ -22,45 +19,26 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "Bot is running"
+    return "Trade Bot OK!"
 
 
 def get_binance_btc_price():
-    try:
-        print("Fetching price...")
-        response = requests.get(
-            "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
-            timeout=20,
-            verify=False,
-        )
-        response.raise_for_status()
-        data = response.json()
-        print(f"data: {data}")
-        return float(data["price"])
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching price: {e}")
-        return None
-
-
-proxies = {
-    "http": "http://43.134.68.153:3128",
-    "https": "http://43.134.68.153:3128",
-}
+    proxies = {
+        "http": "http://43.134.68.153:3128",
+        "https": "http://43.134.68.153:3128",
+    }
+    response = requests.get(BINANCE_API_URL, proxies=proxies)
+    data = response.json()
+    return float(data["price"])
 
 
 @app.route("/test-binance")
 def test_binance():
-    print("Fetching price...")
-    response = requests.get(
-        "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
-        timeout=20,
-        proxies=proxies,
-        verify=False,
-    )
-    data = response.json()
-    print(f"data: {data}")
-
-    return f"BTC price: {data} | {response}"
+    price = get_binance_btc_price()
+    if price is not None:
+        return f"BTC price: {price}"
+    else:
+        return "Error fetching price"
 
 
 def format_message(action, price, take_profit, margin_percent):
@@ -96,112 +74,122 @@ def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.guilds = True
-intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+client = discord.Client(intents=intents)
 
 
-@bot.event
+@client.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print(f"Logged in as {client.user}")
 
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def b(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+@client.event
+async def on_message(message):
+    if message.author == client.user:
         return
 
-    try:
-        # price = get_binance_btc_price()
-        price = 100
-        take_profit = price * 1.005
-        action_text = "long"
-
-        await ctx.send(format_message(action_text, price, take_profit, margin))
-    except ValueError:
-        await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!b 1.5`)."
-        )
-
-    await ctx.message.delete()
-
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def s(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+    if message.channel.name != SIGNALS_CHANNEL:
         return
 
-    try:
-        price = get_binance_btc_price()
-        # price = 100
-        take_profit = price * 0.995
-        action_text = "short"
-
-        await ctx.send(format_message(action_text, price, take_profit, margin))
-    except ValueError:
-        await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!s 2.0`)."
-        )
-
-    await ctx.message.delete()
-
-
-# Command for setting Stop Loss
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def sl(ctx, action: str, stop_loss_price: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+    if not message.author.guild_permissions.administrator:
+        await message.channel.send("❌ You don't have permission to use this command.")
         return
 
-    if action not in ["b", "s"]:
-        await ctx.send("❌ Invalid action. Use `!sl b {price}` or `!sl s {price}`.")
-        return
+    if message.content.startswith("!b ") or message.content.startswith("!s "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) < 2:
+                await message.channel.send(
+                    "❌ Please provide a valid margin (e.g., !b 1 or !s 1.5)."
+                )
+                return
+            margin_percent = float(command_parts[1])
 
-    await ctx.send(format_stop_loss_message(action, stop_loss_price))
-    await ctx.message.delete()
+            action = "long" if message.content.startswith("!b") else "short"
+            price = get_binance_btc_price()
+            take_profit = price * (1.005 if action == "long" else 0.995)
 
+            await message.channel.send(
+                format_message(action, price, take_profit, margin_percent)
+            )
 
-# Command for setting Trailing Stop Loss
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def tsl(ctx, action: str, stop_loss_price: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
-        return
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid margin. Please provide a valid number (e.g., !b 1 or !s 0.85)."
+            )
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
 
-    if action not in ["b", "s"]:
-        await ctx.send("❌ Invalid action. Use `!tsl b {price}` or `!tsl s {price}`.")
-        return
+    elif message.content.startswith("!sl "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 3 or command_parts[1] not in ["b", "s"]:
+                await message.channel.send(
+                    "❌ Invalid command. Use !sl b {price} for buy or !sl s {price} for sell."
+                )
+                return
 
-    await ctx.send(format_stop_loss_message(action, stop_loss_price, "New Trailing "))
-    await ctx.message.delete()
+            action = command_parts[1]
+            stop_loss_price = float(command_parts[2])
 
+            await message.channel.send(
+                format_stop_loss_message(action, stop_loss_price)
+            )
 
-# Error handler for permissions
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You don't have permission to use this command.")
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid stop loss price. Please provide a valid number (e.g., !sl b 65000)."
+            )
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.content.startswith("!tsl "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 3 or command_parts[1] not in ["b", "s"]:
+                await message.channel.send(
+                    "❌ Invalid command. Use !tsl b {price} for buy or !tsl s {price} for sell."
+                )
+                return
+
+            action = command_parts[1]
+            stop_loss_price = float(command_parts[2])
+
+            await message.channel.send(
+                format_stop_loss_message(action, stop_loss_price, "New Trailing ")
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid stop loss price. Please provide a valid number (e.g., !tsl b 65000)."
+            )
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
 
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def run_flask():
+def run_discord_bot():
+    client.run(TOKEN)
+
+
+if __name__ == "__main__":
+    discord_thread = threading.Thread(target=run_discord_bot)
+    discord_thread.start()
+
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), threaded=True)
-
-
-def main():
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-
-    asyncio.run(bot.start(TOKEN))
-
-
-main()
