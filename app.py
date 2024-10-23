@@ -44,11 +44,16 @@ def get_binance_btc_price():
 
 @app.route("/test-binance")
 def test_binance():
-    price = get_binance_btc_price()
-    if price is not None:
-        return f"BTC price: {price}"
-    else:
-        return "Error fetching price"
+    print("Fetching price...")
+    response = requests.get(
+        "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
+        timeout=20,
+        verify=False,
+    )
+    data = response.json()
+    print(f"data: {data}")
+
+    return f"BTC price: {float(data['price'])}"
 
 
 def format_message(action, price, take_profit, margin_percent):
