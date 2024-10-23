@@ -53,10 +53,11 @@ def test_binance():
         proxies=proxies,
         verify=False,
     )
+    response.raise_for_status()
     data = response.json()
     print(f"data: {data}")
 
-    return f"BTC price: {data}}"
+    return f"BTC price: {data}"
 
 
 def format_message(action, price, take_profit, margin_percent):
