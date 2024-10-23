@@ -76,45 +76,28 @@ async def on_ready():
 
 
 # Command for Buy or Sell signals
-# Command for Buy signal (Long)
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def buy(ctx, margin: float):
+async def signal(ctx, action: str, margin: float):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
-    try:
-        price = get_binance_btc_price()
-        take_profit = price * 1.005  # 50% ROI calculation for buy
-        action_text = "long"
-
-        await ctx.send(format_message(action_text, price, take_profit, margin))
-    except ValueError:
+    if action not in ["b", "s"]:
         await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!buy 1.5`)."
+            "❌ Invalid action. Use `!signal b {margin}` or `!signal s {margin}`."
         )
-
-    await ctx.message.delete()
-
-
-# Command for Sell signal (Short)
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def sell(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
         return
 
     try:
         price = get_binance_btc_price()
-        take_profit = price * 0.995  # 50% ROI calculation for sell
-        action_text = "short"
+        take_profit = price * (1.005 if action == "b" else 0.995)
+        action_text = "long" if action == "b" else "short"
 
         await ctx.send(format_message(action_text, price, take_profit, margin))
     except ValueError:
         await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!sell 2.0`)."
+            "❌ Invalid margin. Please provide a valid number (e.g., `!signal b 1.5`)."
         )
 
     await ctx.message.delete()
