@@ -13,7 +13,6 @@ TOKEN = os.getenv(
     "DISCORD_TOKEN",
     "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ",
 )
-BINANCE_API_URL = "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT"
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
 SIGNALS_CHANNEL = "signals"
 
@@ -27,9 +26,25 @@ def home():
 
 
 def get_binance_btc_price():
-    response = requests.get(BINANCE_API_URL)
-    data = response.json()
-    return float(data["price"])
+    try:
+        response = requests.get(
+            "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT", timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        return float(data["price"])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching price: {e}")
+        return None
+
+
+@app.route("/test-binance")
+def test_binance():
+    price = get_binance_btc_price()
+    if price is not None:
+        return f"BTC price: {price}"
+    else:
+        return "Error fetching price"
 
 
 def format_message(action, price, take_profit, margin_percent):
@@ -75,8 +90,6 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
 
 
-# Command for Buy or Sell signals
-# Command for Buy signal (Long)
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def b(ctx, margin: float):
@@ -87,7 +100,7 @@ async def b(ctx, margin: float):
     try:
         # price = get_binance_btc_price()
         price = 100
-        take_profit = price * 1.005  # 50% ROI calculation for buy
+        take_profit = price * 1.005
         action_text = "long"
 
         await ctx.send(format_message(action_text, price, take_profit, margin))
@@ -99,7 +112,6 @@ async def b(ctx, margin: float):
     await ctx.message.delete()
 
 
-# Command for Sell signal (Short)
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def s(ctx, margin: float):
@@ -110,7 +122,7 @@ async def s(ctx, margin: float):
     try:
         price = get_binance_btc_price()
         # price = 100
-        take_profit = price * 0.995  # 50% ROI calculation for sell
+        take_profit = price * 0.995
         action_text = "short"
 
         await ctx.send(format_message(action_text, price, take_profit, margin))
