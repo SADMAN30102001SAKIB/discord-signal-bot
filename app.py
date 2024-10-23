@@ -111,8 +111,8 @@ async def b(ctx, margin: float):
         return
 
     try:
-        # price = get_binance_btc_price()
-        price = 100
+        price = get_binance_btc_price()
+        # price = 100
         take_profit = price * 1.005
         action_text = "long"
 
