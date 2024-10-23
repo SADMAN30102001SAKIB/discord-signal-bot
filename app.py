@@ -53,7 +53,7 @@ def test_binance():
     data = response.json()
     print(f"data: {data}")
 
-    return f"BTC price: {float(data['price'])}"
+    return f"BTC price: {data}"
 
 
 def format_message(action, price, take_profit, margin_percent):
