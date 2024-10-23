@@ -29,7 +29,9 @@ def get_binance_btc_price():
     try:
         print("Fetching price...")
         response = requests.get(
-            "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT"
+            "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
+            timeout=20,
+            verify=False,
         )
         response.raise_for_status()
         data = response.json()
