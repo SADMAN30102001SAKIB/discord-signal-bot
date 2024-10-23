@@ -88,6 +88,8 @@ async def on_message(message):
         await message.channel.send("❌ You don't have permission to use this command.")
         return
 
+    print(message.content)
+
     if message.content.startswith("!b ") or message.content.startswith("!s "):
         try:
             command_parts = message.content.split()
