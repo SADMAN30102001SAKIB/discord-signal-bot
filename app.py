@@ -43,8 +43,8 @@ def get_binance_btc_price():
 
 
 proxies = {
-    "http": "http://139.59.1.14:8080",
-    "https": "http://139.59.1.14:8080",
+    "http": "http://43.134.68.153:3128",
+    "https": "http://43.134.68.153:3128",
 }
 
 
@@ -53,10 +53,14 @@ def test_binance():
     print("Fetching price...")
     response = requests.get(
         "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
+        timeout=20,
         proxies=proxies,
+        verify=False,
     )
     data = response.json()
-    return f"BTC price: {data}"
+    print(f"data: {data}")
+
+    return f"BTC price: {data} | {response}"
 
 
 def format_message(action, price, take_profit, margin_percent):
