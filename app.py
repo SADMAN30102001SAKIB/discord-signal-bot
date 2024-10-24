@@ -55,12 +55,12 @@ def get_coinbase_btc_price():
         return None
 
 
-@app.route("/test-binance")
+@app.route("/test-coinbase")
 def test_binance():
     response = requests.get("https://api.coinbase.com/v2/prices/BTC-USDT/spot", timeout=20)
     response.raise_for_status()
     data = response.json()
-    return f"BTC price: {data["data"]["amount"]}"
+    return f"BTC price: {data}"
 
 
 def format_message(action, price, take_profit, margin_percent):
