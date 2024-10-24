@@ -43,7 +43,7 @@ async def get_coinbase_btc_price():
 
 
 @app.route("/test-coinbase")
-async def test_binance():
+async def test_coinbase():
     data = await get_coinbase_btc_price()
     return f"BTC price: {data}"
 
