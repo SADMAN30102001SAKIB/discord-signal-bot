@@ -22,7 +22,7 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "Bot is running"
+    return "Bot is OK!"
 
 proxies = {
     "http": "http://43.134.68.153:3128",
@@ -44,20 +44,23 @@ def get_binance_btc_price():
         print(f"Error fetching price: {e}")
         return None
 
+def get_coinbase_btc_price():
+    try:
+        response = requests.get("https://api.coinbase.com/v2/prices/BTC-USDT/spot", timeout=20)
+        response.raise_for_status()
+        data = response.json()
+        return float(data["data"]["amount"])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching price: {e}")
+        return None
+
 
 @app.route("/test-binance")
 def test_binance():
-    response = requests.get(
-        "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
-        timeout=20,
-        proxies=proxies,
-        verify=False,
-    )
+    response = requests.get("https://api.coinbase.com/v2/prices/BTC-USDT/spot", timeout=20)
     response.raise_for_status()
     data = response.json()
-    print(f"data: {data}")
-
-    return f"BTC price: {data}"
+    return f"BTC price: {data["data"]["amount"]}"
 
 
 def format_message(action, price, take_profit, margin_percent):
@@ -74,10 +77,26 @@ def format_message(action, price, take_profit, margin_percent):
     )
 
 
-def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
+def format_stop_loss_message(action, stop_loss_price):
     if action == "b":
         return (
-            f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
+            f"🛑 **Stop Loss Update**\n\n"
+            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
+            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
+            f"<@&{SUBSCRIBER_ROLE_ID}>"
+        )
+    elif action == "s":
+        return (
+            f"🛑 **Stop Loss Update**\n\n"
+            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
+            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
+            f"<@&{SUBSCRIBER_ROLE_ID}>"
+        )
+
+def format_trailing_stop_loss_message(action, stop_loss_price):
+    if action == "b":
+        return (
+            f"🛑 **New Trailing Stop Loss Update**\n\n"
             f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
@@ -111,7 +130,8 @@ async def b(ctx, margin: float):
         return
 
     try:
-        price = get_binance_btc_price()
+        # price = get_binance_btc_price()
+        price = get_coinbase_btc_price()
         # price = 100
         take_profit = price * 1.005
         action_text = "long"
@@ -133,7 +153,8 @@ async def s(ctx, margin: float):
         return
 
     try:
-        price = get_binance_btc_price()
+        # price = get_binance_btc_price()
+        price = get_coinbase_btc_price()
         # price = 100
         take_profit = price * 0.995
         action_text = "short"
@@ -175,7 +196,7 @@ async def tsl(ctx, action: str, stop_loss_price: float):
         await ctx.send("❌ Invalid action. Use `!tsl b {price}` or `!tsl s {price}`.")
         return
 
-    await ctx.send(format_stop_loss_message(action, stop_loss_price, "New Trailing "))
+    await ctx.send(format_trailing_stop_loss_message(action, stop_loss_price))
     await ctx.message.delete()
 
 
