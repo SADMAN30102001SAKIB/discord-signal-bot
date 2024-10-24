@@ -22,31 +22,11 @@ CORS(app)
 
 @app.route("/")
 def home():
-    return "Bot is OK!"
-
-proxies = {
-    "http": "http://43.134.68.153:3128",
-    "https": "http://43.134.68.153:3128",
-}
-
-def get_binance_btc_price():
-    try:
-        response = requests.get(
-            "https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT",
-            timeout=20,
-            proxies=proxies,
-            verify=False,
-        )
-        response.raise_for_status()
-        data = response.json()
-        return float(data["price"])
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching price: {e}")
-        return None
+    return "Trading Bot OK"
 
 def get_coinbase_btc_price():
     try:
-        response = requests.get("https://api.coinbase.com/v2/prices/BTC-USDT/spot", timeout=20)
+        response = requests.get("https://api.coinbase.com/v2/prices/BTC-USD/spot", timeout=20)
         response.raise_for_status()
         data = response.json()
         return float(data["data"]["amount"])
@@ -57,7 +37,7 @@ def get_coinbase_btc_price():
 
 @app.route("/test-coinbase")
 def test_binance():
-    response = requests.get("https://api.coinbase.com/v2/prices/BTC-USDT/spot", timeout=20)
+    response = requests.get("https://api.coinbase.com/v2/prices/BTC-USD/spot", timeout=20)
     response.raise_for_status()
     data = response.json()
     return f"BTC price: {data}"
@@ -70,7 +50,7 @@ def format_message(action, price, take_profit, margin_percent):
         f"💥 **Leverage**: Cross 100x\n\n"
         f"🔸 **Entry Price**: ${price:.2f}\n"
         f"🔹 **Take Profit (50% ROI)**: ${take_profit:.2f}\n"
-        f"(*These prices are taken from Binance Futures*)\n\n"
+        f"(*These prices are taken from Coinbase BTC-USD*)\n\n"
         f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n\n"
         f"⚠️ **Stop Loss**: We'll update very soon.\n\n\n"
         f"<@&{SUBSCRIBER_ROLE_ID}>"
