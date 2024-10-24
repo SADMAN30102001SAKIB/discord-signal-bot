@@ -157,7 +157,7 @@ async def s(ctx, margin: float):
 # Command for setting Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def sl(ctx, action: str, entry_price: float, stop_loss: float):
+async def sl(ctx, action: str, entry_price: float, stop_loss: float = None):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -165,6 +165,9 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float):
     if action not in ["b", "s"]:
         await ctx.send("❌ Invalid action. Use `!sl b {price}` or `!sl s {price}`.")
         return
+
+    if stop_loss is None:
+        stop_loss = 5
 
     stop_loss_price = (
         entry_price * (1 - stop_loss / 100)
@@ -179,7 +182,7 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float):
 # Command for setting Trailing Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def tsl(ctx, action: str, entry_price: float, stop_loss: float):
+async def tsl(ctx, action: str, entry_price: float, stop_loss: float = None):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -187,6 +190,9 @@ async def tsl(ctx, action: str, entry_price: float, stop_loss: float):
     if action not in ["b", "s"]:
         await ctx.send("❌ Invalid action. Use `!tsl b {price}` or `!tsl s {price}`.")
         return
+
+    if stop_loss is None:
+        stop_loss = 0
 
     stop_loss_price = (
         entry_price * (1 - stop_loss / 100)
