@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 
+import aiohttp
 import discord
 import requests
 from discord.ext import commands
@@ -25,26 +26,25 @@ def home():
     return "Trading Bot OK"
 
 
-def get_coinbase_btc_price():
+async def get_coinbase_btc_price():
+    url = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
     try:
-        response = requests.get(
-            "https://api.coinbase.com/v2/prices/BTC-USD/spot", timeout=20
-        )
-        response.raise_for_status()
-        data = response.json()
-        return float(data["data"]["amount"])
-    except requests.exceptions.RequestException as e:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=20) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return float(data["data"]["amount"])
+                else:
+                    print(f"Error fetching price, status code: {response.status}")
+                    return None
+    except aiohttp.ClientError as e:
         print(f"Error fetching price: {e}")
         return None
 
 
 @app.route("/test-coinbase")
 def test_binance():
-    response = requests.get(
-        "https://api.coinbase.com/v2/prices/BTC-USD/spot", timeout=20
-    )
-    response.raise_for_status()
-    data = response.json()
+    data = get_coinbase_btc_price()
     return f"BTC price: {data}"
 
 
@@ -157,7 +157,7 @@ async def s(ctx, margin: float):
 # Command for setting Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def sl(ctx, action: str, entry_price: float, stop_loss: float = None):
+async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -165,9 +165,6 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float = None):
     if action not in ["b", "s"]:
         await ctx.send("❌ Invalid action. Use `!sl b {price}` or `!sl s {price}`.")
         return
-
-    if stop_loss is None:
-        stop_loss = 5
 
     stop_loss_price = (
         entry_price * (1 - stop_loss / 100)
@@ -182,7 +179,7 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float = None):
 # Command for setting Trailing Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def tsl(ctx, action: str, entry_price: float, stop_loss: float = None):
+async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
     if ctx.channel.name != SIGNALS_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
@@ -190,9 +187,6 @@ async def tsl(ctx, action: str, entry_price: float, stop_loss: float = None):
     if action not in ["b", "s"]:
         await ctx.send("❌ Invalid action. Use `!tsl b {price}` or `!tsl s {price}`.")
         return
-
-    if stop_loss is None:
-        stop_loss = 0
 
     stop_loss_price = (
         entry_price * (1 - stop_loss / 100)
