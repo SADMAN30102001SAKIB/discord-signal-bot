@@ -116,9 +116,7 @@ async def b(ctx, margin: float):
         return
 
     try:
-        # price = get_binance_btc_price()
-        price = get_coinbase_btc_price()
-        # price = 100
+        price = await get_coinbase_btc_price()
         take_profit = price * 1.005
         action_text = "long"
 
@@ -139,9 +137,7 @@ async def s(ctx, margin: float):
         return
 
     try:
-        # price = get_binance_btc_price()
-        price = get_coinbase_btc_price()
-        # price = 100
+        price = await get_coinbase_btc_price()
         take_profit = price * 0.995
         action_text = "short"
 
@@ -154,7 +150,6 @@ async def s(ctx, margin: float):
     await ctx.message.delete()
 
 
-# Command for setting Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
@@ -198,7 +193,6 @@ async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
     await ctx.message.delete()
 
 
-# Error handler for permissions
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
