@@ -81,14 +81,14 @@ def format_stop_loss_message(action, stop_loss_price):
     if action == "b":
         return (
             f"🛑 **Stop Loss Update**\n\n"
-            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
+            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f} 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     elif action == "s":
         return (
             f"🛑 **Stop Loss Update**\n\n"
-            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
+            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f} 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
@@ -97,14 +97,14 @@ def format_trailing_stop_loss_message(action, stop_loss_price):
     if action == "b":
         return (
             f"🛑 **New Trailing Stop Loss Update**\n\n"
-            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
+            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f} 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     elif action == "s":
         return (
-            f"🛑 **Stop Loss Update**\n\n"
-            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
+            f"🛑 **New Trailing Stop Loss Update**\n\n"
+            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f} 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
