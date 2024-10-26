@@ -194,11 +194,15 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-async def main():
-    bot_task = bot.start(TOKEN)
-    app_task = app.run_task(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-    await asyncio.gather(bot_task, app_task)
+async def start_bot():
+    await asyncio.sleep(10)
+    await bot.start(TOKEN)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.create_task(
+        app.run_task(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    )
+    loop.create_task(start_bot())
+    loop.run_forever()
