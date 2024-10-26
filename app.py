@@ -1,16 +1,14 @@
 import asyncio
 import os
 import sys
-from threading import Thread
 
 import aiohttp
 import discord
 from discord.ext import commands
-from flask import Flask
 from flask_cors import CORS
+from quart import Quart
 
-app = Flask(__name__)
-CORS(app)
+app = Quart(__name__)
 
 TOKEN = os.environ["discord_token"]
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
@@ -45,9 +43,9 @@ async def get_coinbase_btc_price():
 
 
 @app.route("/test-coinbase")
-def test_coinbase():
-    data = asyncio.run(get_coinbase_btc_price())
-    return f"BTC price: {data}"
+async def test_coinbase():
+    price = await get_coinbase_btc_price()
+    return f"BTC price: {price}"
 
 
 def format_message(action, price, take_profit, margin_percent):
@@ -193,19 +191,15 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ You don't have permission to use this command.")
 
 
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-async def run_discord():
-    await bot.start(TOKEN)
+async def main():
+    bot_task = bot.start(TOKEN)
+    app_task = app.run_task(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    await asyncio.gather(bot_task, app_task)
 
 
 if __name__ == "__main__":
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-    flask_thread = Thread(target=run_flask)
-    flask_thread.start()
-
-    asyncio.run(run_discord())
+    asyncio.run(main())
