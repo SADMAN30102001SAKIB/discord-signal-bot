@@ -5,7 +5,6 @@ import sys
 import aiohttp
 import discord
 from discord.ext import commands
-from flask_cors import CORS
 from quart import Quart
 
 app = Quart(__name__)
