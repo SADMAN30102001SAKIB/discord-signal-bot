@@ -1,14 +1,16 @@
 import asyncio
 import os
 import sys
-import threading
+from threading import Thread
 
 import aiohttp
 import discord
-import requests
 from discord.ext import commands
 from flask import Flask
 from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
 
 TOKEN = os.getenv(
     "DISCORD_TOKEN",
@@ -16,9 +18,12 @@ TOKEN = os.getenv(
 )
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
 SIGNALS_CHANNEL = "signals"
+TEST_CHANNEL = "test"
 
-app = Flask(__name__)
-CORS(app)
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 @app.route("/")
@@ -43,8 +48,8 @@ async def get_coinbase_btc_price():
 
 
 @app.route("/test-coinbase")
-async def test_coinbase():
-    data = await get_coinbase_btc_price()
+def test_coinbase():
+    data = asyncio.run(get_coinbase_btc_price())
     return f"BTC price: {data}"
 
 
@@ -96,13 +101,6 @@ def format_trailing_stop_loss_message(action, stop_loss_price):
         )
 
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.guilds = True
-intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
@@ -111,7 +109,7 @@ async def on_ready():
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def b(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -132,7 +130,7 @@ async def b(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def s(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -153,7 +151,7 @@ async def s(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -171,11 +169,10 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
     await ctx.message.delete()
 
 
-# Command for setting Trailing Stop Loss
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -204,14 +201,17 @@ if sys.platform == "win32":
 
 
 def run_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), threaded=True)
+    app.run(host="0.0.0.0", port=8080)
 
 
 def main():
-    flask_thread = threading.Thread(target=run_flask)
+    flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    asyncio.run(bot.start(TOKEN))
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"Bot encountered an error: {e}")
 
 
 main()
