@@ -211,10 +211,12 @@ def run_flask():
 def main():
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
-    
+
     try:
         asyncio.run(bot.start(TOKEN))
+    except Exception as e:
+        print(f"Bot encountered an error: {e}")
     finally:
-        print("Shutdown!")
+        print("Bot shutdown complete!")
 
 main()
