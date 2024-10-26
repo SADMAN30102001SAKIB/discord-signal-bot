@@ -16,6 +16,7 @@ TOKEN = os.getenv(
 )
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
 SIGNALS_CHANNEL = "signals"
+TEST_CHANNEL = "test"
 
 app = Flask(__name__)
 CORS(app)
@@ -43,8 +44,8 @@ async def get_coinbase_btc_price():
 
 
 @app.route("/test-coinbase")
-async def test_coinbase():
-    data = await get_coinbase_btc_price()
+def test_coinbase():
+    data = asyncio.run(get_coinbase_btc_price())
     return f"BTC price: {data}"
 
 
@@ -111,7 +112,7 @@ async def on_ready():
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def b(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -132,7 +133,7 @@ async def b(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def s(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -153,7 +154,7 @@ async def s(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -175,7 +176,7 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -210,8 +211,10 @@ def run_flask():
 def main():
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
-
-    asyncio.run(bot.start(TOKEN))
-
+    
+    try:
+        asyncio.run(bot.start(TOKEN))
+    finally:
+        print("Shutdown!")
 
 main()
