@@ -12,10 +12,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-TOKEN = os.getenv(
-    "DISCORD_TOKEN",
-    "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GG7ba4.WFzNXdKhWTABhkOvk31J_Obx0XZhqFLEQ1eSyQ",
-)
+TOKEN = os.environ["discord_token"]
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
 SIGNALS_CHANNEL = "signals"
 TEST_CHANNEL = "test"
