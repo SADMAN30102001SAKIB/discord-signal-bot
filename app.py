@@ -193,22 +193,19 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ You don't have permission to use this command.")
 
 
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-
 def run_flask():
     app.run(host="0.0.0.0", port=8080)
 
 
-def main():
+async def run_discord():
+    await bot.start(TOKEN)
+
+
+if __name__ == "__main__":
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
-    try:
-        bot.run(TOKEN)
-    except Exception as e:
-        print(f"Bot encountered an error: {e}")
-
-
-main()
+    asyncio.run(run_discord())
