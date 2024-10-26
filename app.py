@@ -111,7 +111,7 @@ async def on_ready():
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def b(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -132,7 +132,7 @@ async def b(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def s(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -153,7 +153,7 @@ async def s(ctx, margin: float):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
@@ -175,7 +175,7 @@ async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL:
+    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != "test":
         await ctx.send("❌ You can't use this command in this channel.")
         return
 
