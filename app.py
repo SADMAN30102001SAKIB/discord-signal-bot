@@ -14,30 +14,14 @@ ALERTS_CHANNEL = "alerts"
 SUBSCRIBER_ROLE_ID = "1293979151266742354"
 
 
-async def get_coinbase_btc_price():
-    url = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
+async def get_coinbase_eth_price():
+    url = "https://api.coinbase.com/v2/prices/ETH-USD/spot"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=20) as response:
                 if response.status == 200:
                     data = await response.json()
                     return float(data["data"]["amount"])
-                else:
-                    print(f"Error fetching price, status code: {response.status}")
-                    return None
-    except aiohttp.ClientError as e:
-        print(f"Error fetching price: {e}")
-        return None
-
-
-async def get_binance_eth_price():
-    url = "https://fapi.binance.com/fapi/v1/ticker/price?symbol=ETHUSDT"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=20) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return float(data["price"])
                 else:
                     print(f"Error fetching price, status code: {response.status}")
                     return None
@@ -281,14 +265,19 @@ async def on_message(message):
             action = "long" if message.content.startswith("!b") else "short"
 
             if len(command_parts) == 2:
-                price = await get_binance_eth_price()
-            if len(command_parts) == 3:
+                price = await get_coinbase_eth_price()
+            elif len(command_parts) == 3:
                 price = float(command_parts[2])
 
-            take_profit = price * (1.01 if action == "long" else 0.99)
-            await message.channel.send(
-                format_message(action, price, take_profit, margin_percent)
-            )
+            if price is None:
+                await message.channel.send(
+                    "❌ Failed to fetch the price. Please try again later."
+                )
+            else:
+                take_profit = price * (1.01 if action == "long" else 0.99)
+                await message.channel.send(
+                    format_message(action, price, take_profit, margin_percent)
+                )
 
         except ValueError:
             await message.channel.send(
@@ -313,15 +302,22 @@ async def on_message(message):
 
             action = "long" if message.content.startswith("!rb") else "short"
 
-            price = await get_binance_eth_price()
+            price = await get_coinbase_eth_price()
             firstEntry = float(command_parts[2])
 
-            take_profit = ((price + firstEntry) / 2) * (
-                1.01 if action == "long" else 0.99
-            )
-            await message.channel.send(
-                format_message(action, price, take_profit, margin_percent, "ReEntry")
-            )
+            if price is None:
+                await message.channel.send(
+                    "❌ Failed to fetch the price. Please try again later."
+                )
+            else:
+                take_profit = ((price + firstEntry) / 2) * (
+                    1.01 if action == "long" else 0.99
+                )
+                await message.channel.send(
+                    format_message(
+                        action, price, take_profit, margin_percent, "ReEntry"
+                    )
+                )
 
         except ValueError:
             await message.channel.send(
