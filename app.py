@@ -30,27 +30,43 @@ async def get_coinbase_btc_price():
         return None
 
 
+async def get_binance_eth_price():
+    url = "https://fapi.binance.com/fapi/v1/ticker/price?symbol=ETHUSDT"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=20) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return float(data["price"])
+                else:
+                    print(f"Error fetching price, status code: {response.status}")
+                    return None
+    except aiohttp.ClientError as e:
+        print(f"Error fetching price: {e}")
+        return None
+
+
 def format_message(action, price, take_profit, margin_percent, reEntry=""):
     if reEntry == "ReEntry":
         return (
-            f"**🪙  Bitcoin**\n\n"
+            f"**🔷  Ethereum**\n\n"
             f"📊 **Direction**: {action.upper()}\n"
-            f"💥 **Leverage**: Cross 100x\n\n"
+            f"💥 **Leverage**: Cross 50x\n\n"
             f"⚠️ **Note**: *This is a 2nd entry!*\n"
             f"🔸 **2nd Entry Price**: ${price:.2f}\n"
-            f"🔹 **Take Profit (50% ROI)**: ${take_profit:.2f}\n"
-            f"(*These prices are taken from Coinbase BTC-USD*)\n\n"
+            f"🔹 **Take Profit (100% ROI)**: ${take_profit:.2f}\n"
+            f"(*These prices are taken from Binance ETH-USDT*)\n\n"
             f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n\n"
             f"⚠️ **Stop Loss**: *We'll update very soon*.\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     return (
-        f"**🪙  Bitcoin**\n\n"
+        f"**🔷  Ethereum**\n\n"
         f"📊 **Direction**: {action.upper()}\n"
-        f"💥 **Leverage**: Cross 100x\n\n"
+        f"💥 **Leverage**: Cross 50x\n\n"
         f"🔸 **Entry Price**: ${price:.2f}\n"
-        f"🔹 **Take Profit (50% ROI)**: ${take_profit:.2f}\n"
-        f"(*These prices are taken from Coinbase BTC-USD*)\n\n"
+        f"🔹 **Take Profit (100% ROI)**: ${take_profit:.2f}\n"
+        f"(*These prices are taken from Binance ETH-USDT*)\n\n"
         f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n"
         f"⚠️ **Note**: *If we need a 2nd entry, then we'll update.*\n\n"
         f"⚠️ **Stop Loss**: *We'll update very soon*.\n\n\n"
@@ -62,18 +78,18 @@ def format_alert_message(action, margin_percent, price, reEntry=""):
     if price == None:
         msg = (
             f"<@&{SUBSCRIBER_ROLE_ID}> **Heads-Up!**\n"
-            f"**🔔 Potential {reEntry}Signal - Bitcoin**\n\n"
+            f"**🔔 Potential {reEntry}Signal - Ethereum**\n\n"
             f"📊 **Direction**: {action.upper()}\n"
-            f"💥 **Leverage**: Cross 100x\n\n"
+            f"💥 **Leverage**: Cross 50x\n\n"
             f"💼 **Prepare to USE {margin_percent}% MARGIN** if the official signal confirms ✅\n\n"
             f"⚠️ **Note**: *This is just a prediction!*\nSo, prepare yourself & have patience. An official signal might or might not come."
         )
     else:
         msg = (
             f"<@&{SUBSCRIBER_ROLE_ID}> **Heads-Up!**\n"
-            f"**🔔 Potential {reEntry}Signal - Bitcoin**\n\n"
+            f"**🔔 Potential {reEntry}Signal - Ethereum**\n\n"
             f"📊 **Direction**: {action.upper()}\n"
-            f"💥 **Leverage**: Cross 100x\n\n"
+            f"💥 **Leverage**: Cross 50x\n\n"
             f"🔸 **Possible Entry Price**: ${price:.2f}\n"
             f"(*This price is subject to change and taken from Coinbase BTC-USD*)\n\n"
             f"💼 **Prepare to USE {margin_percent}% MARGIN** if the official signal confirms ✅\n\n"
@@ -87,14 +103,14 @@ def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
         return (
             f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
             f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
-            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
+            f"(*If the Stop Loss needs to trail or an early exit is required, then we'll notify.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     elif action == "s":
         return (
             f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
             f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
-            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
+            f"(*If the Stop Loss needs to trail or an early exit is required, then we'll notify.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
 
@@ -239,6 +255,19 @@ async def on_message(message):
         except discord.HTTPException:
             print("Failed to delete message due to an HTTP error.")
 
+    elif message.content.startswith("!e"):
+        try:
+            await message.channel.send(f"Exit Now!. <@&{SUBSCRIBER_ROLE_ID}>")
+
+        except ValueError:
+            await message.channel.send("❌ Invalid command. It should be !e")
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
     elif message.content.startswith("!b ") or message.content.startswith("!s "):
         try:
             command_parts = message.content.split()
@@ -252,11 +281,11 @@ async def on_message(message):
             action = "long" if message.content.startswith("!b") else "short"
 
             if len(command_parts) == 2:
-                price = await get_coinbase_btc_price()
+                price = await get_binance_eth_price()
             if len(command_parts) == 3:
                 price = float(command_parts[2])
 
-            take_profit = price * (1.005 if action == "long" else 0.995)
+            take_profit = price * (1.01 if action == "long" else 0.99)
             await message.channel.send(
                 format_message(action, price, take_profit, margin_percent)
             )
@@ -284,11 +313,11 @@ async def on_message(message):
 
             action = "long" if message.content.startswith("!rb") else "short"
 
-            price = await get_coinbase_btc_price()
+            price = await get_binance_eth_price()
             firstEntry = float(command_parts[2])
 
             take_profit = ((price + firstEntry) / 2) * (
-                1.005 if action == "long" else 0.995
+                1.01 if action == "long" else 0.99
             )
             await message.channel.send(
                 format_message(action, price, take_profit, margin_percent, "ReEntry")
