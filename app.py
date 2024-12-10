@@ -1,28 +1,17 @@
 import asyncio
-import os
 import sys
 
 import aiohttp
 import discord
-from discord.ext import commands
-from quart import Quart
 
-app = Quart(__name__)
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-TOKEN = os.environ["discord_token"]
-SUBSCRIBER_ROLE_ID = "1293979151266742354"
+TOKEN = "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GzH5NJ.LlcTX81prQy3uz5aILsfmx885_n66kWqIJqlAQ"
 SIGNALS_CHANNEL = "signals"
 TEST_CHANNEL = "test"
-
-
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-
-@app.route("/")
-def home():
-    return "Trading Bot OK"
+ALERTS_CHANNEL = "alerts"
+SUBSCRIBER_ROLE_ID = "1293979151266742354"
 
 
 async def get_coinbase_btc_price():
@@ -41,13 +30,20 @@ async def get_coinbase_btc_price():
         return None
 
 
-@app.route("/test-coinbase")
-async def test_coinbase():
-    price = await get_coinbase_btc_price()
-    return f"BTC price: {price}"
-
-
-def format_message(action, price, take_profit, margin_percent):
+def format_message(action, price, take_profit, margin_percent, reEntry=""):
+    if reEntry == "ReEntry":
+        return (
+            f"**🪙  Bitcoin**\n\n"
+            f"📊 **Direction**: {action.upper()}\n"
+            f"💥 **Leverage**: Cross 100x\n\n"
+            f"⚠️ **Note**: *This is a 2nd entry!*\n"
+            f"🔸 **2nd Entry Price**: ${price:.2f}\n"
+            f"🔹 **Take Profit (50% ROI)**: ${take_profit:.2f}\n"
+            f"(*These prices are taken from Coinbase BTC-USD*)\n\n"
+            f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n\n"
+            f"⚠️ **Stop Loss**: *We'll update very soon*.\n\n\n"
+            f"<@&{SUBSCRIBER_ROLE_ID}>"
+        )
     return (
         f"**🪙  Bitcoin**\n\n"
         f"📊 **Direction**: {action.upper()}\n"
@@ -55,154 +51,315 @@ def format_message(action, price, take_profit, margin_percent):
         f"🔸 **Entry Price**: ${price:.2f}\n"
         f"🔹 **Take Profit (50% ROI)**: ${take_profit:.2f}\n"
         f"(*These prices are taken from Coinbase BTC-USD*)\n\n"
-        f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n\n"
-        f"⚠️ **Stop Loss**: We'll update very soon.\n\n\n"
+        f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n"
+        f"⚠️ **Note**: *If we need a 2nd entry, then we'll update.*\n\n"
+        f"⚠️ **Stop Loss**: *We'll update very soon*.\n\n\n"
         f"<@&{SUBSCRIBER_ROLE_ID}>"
     )
 
 
-def format_stop_loss_message(action, stop_loss_price):
+def format_alert_message(action, margin_percent, price, reEntry=""):
+    if price == None:
+        msg = (
+            f"<@&{SUBSCRIBER_ROLE_ID}> **Heads-Up!**\n"
+            f"**🔔 Potential {reEntry}Signal - Bitcoin**\n\n"
+            f"📊 **Direction**: {action.upper()}\n"
+            f"💥 **Leverage**: Cross 100x\n\n"
+            f"💼 **Prepare to USE {margin_percent}% MARGIN** if the official signal confirms ✅\n\n"
+            f"⚠️ **Note**: *This is just a prediction!*\nSo, prepare yourself & have patience. An official signal might or might not come."
+        )
+    else:
+        msg = (
+            f"<@&{SUBSCRIBER_ROLE_ID}> **Heads-Up!**\n"
+            f"**🔔 Potential {reEntry}Signal - Bitcoin**\n\n"
+            f"📊 **Direction**: {action.upper()}\n"
+            f"💥 **Leverage**: Cross 100x\n\n"
+            f"🔸 **Possible Entry Price**: ${price:.2f}\n"
+            f"(*This price is subject to change and taken from Coinbase BTC-USD*)\n\n"
+            f"💼 **Prepare to USE {margin_percent}% MARGIN** if the official signal confirms ✅\n\n"
+            f"⚠️ **Note**: *This is just a prediction!*\nSo, prepare yourself & have patience. An official signal might or might not come."
+        )
+    return msg
+
+
+def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
     if action == "b":
         return (
-            f"🛑 **Stop Loss Update**\n\n"
-            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f} 💡\n"
+            f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
+            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     elif action == "s":
         return (
-            f"🛑 **Stop Loss Update**\n\n"
-            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f} 💡\n"
+            f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
+            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
             f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
 
 
-def format_trailing_stop_loss_message(action, stop_loss_price):
-    if action == "b":
-        return (
-            f"🛑 **New Trailing Stop Loss Update**\n\n"
-            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f} 💡\n"
-            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
-            f"<@&{SUBSCRIBER_ROLE_ID}>"
-        )
-    elif action == "s":
-        return (
-            f"🛑 **New Trailing Stop Loss Update**\n\n"
-            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f} 💡\n"
-            f"(*If the Stop Loss needs to trail, then we'll update.*)\n\n\n"
-            f"<@&{SUBSCRIBER_ROLE_ID}>"
-        )
+intents = discord.Intents.default()
+intents.message_content = True
+client = discord.Client(intents=intents)
 
 
-@bot.event
+@client.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print(f"Logged in as {client.user}")
 
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def b(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+@client.event
+async def on_message(message):
+    if message.author == client.user:
         return
 
-    try:
-        price = await get_coinbase_btc_price()
-        take_profit = price * 1.005
-        action_text = "long"
-
-        await ctx.send(format_message(action_text, price, take_profit, margin))
-    except ValueError:
-        await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!b 1.5`)."
-        )
-
-    await ctx.message.delete()
-
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def s(ctx, margin: float):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+    if (
+        message.channel.name != SIGNALS_CHANNEL
+        and message.channel.name != TEST_CHANNEL
+        and message.channel.name != ALERTS_CHANNEL
+    ):
         return
 
-    try:
-        price = await get_coinbase_btc_price()
-        take_profit = price * 0.995
-        action_text = "short"
-
-        await ctx.send(format_message(action_text, price, take_profit, margin))
-    except ValueError:
-        await ctx.send(
-            "❌ Invalid margin. Please provide a valid number (e.g., `!s 2.0`)."
-        )
-
-    await ctx.message.delete()
-
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def sl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
+    if not message.author.guild_permissions.administrator:
+        await message.channel.send("❌ You don't have permission to use this command.")
         return
 
-    if action not in ["b", "s"]:
-        await ctx.send("❌ Invalid action. Use `!sl b {price}` or `!sl s {price}`.")
-        return
+    if message.channel.name == ALERTS_CHANNEL and (
+        message.content.startswith("!b ") or message.content.startswith("!s ")
+    ):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) < 2:
+                await message.channel.send(
+                    "❌ Please provide a valid margin (e.g., !b 1 or !s 1.5 70580)"
+                )
+                return
+            margin_percent = float(command_parts[1])
 
-    stop_loss_price = (
-        entry_price * (1 - stop_loss / 100)
-        if action == "b"
-        else entry_price * (1 + stop_loss / 100)
-    )
+            action = "long" if message.content.startswith("!b") else "short"
+            price = None
 
-    await ctx.send(format_stop_loss_message(action, stop_loss_price))
-    await ctx.message.delete()
+            if len(command_parts) == 3:
+                price = float(command_parts[2])
+
+            await message.channel.send(
+                format_alert_message(
+                    action,
+                    margin_percent,
+                    price,
+                )
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid margin. Please provide a valid number (e.g., !b 1 68456 or !s 0.85)."
+            )
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.channel.name == ALERTS_CHANNEL and (
+        message.content.startswith("!rb ") or message.content.startswith("!rs ")
+    ):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 2:
+                await message.channel.send(
+                    "❌ Please provide a valid margin (e.g., !rb 1 or !rs 0.85)"
+                )
+                return
+            margin_percent = float(command_parts[1])
+
+            action = "long" if message.content.startswith("!rb") else "short"
+            price = None
+
+            await message.channel.send(
+                format_alert_message(
+                    action,
+                    margin_percent,
+                    price,
+                    "2nd Entry ",
+                )
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid margin. Please provide a valid number (e.g., !rb 1 or !rs 0.85)."
+            )
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.channel.name == ALERTS_CHANNEL and message.content.startswith("!o"):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) > 2:
+                await message.channel.send(
+                    "❌ Invalid command. It should be !o or !o 2"
+                )
+                return
+            if len(command_parts) == 2:
+                margin_percent = float(command_parts[1])
+                await message.channel.send(
+                    f"We Might Exit Now & Take a New Trade in the Opposite Direction With {margin_percent}% Margin of Our Total Capital! Be Ready for the Official Signals. <@&{SUBSCRIBER_ROLE_ID}>"
+                )
+            else:
+                await message.channel.send(
+                    f"We Might Exit Now & Take a New Trade in the Opposite Direction! Be Ready for the Official Signal. <@&{SUBSCRIBER_ROLE_ID}>"
+                )
+
+        except ValueError:
+            await message.channel.send("❌ Invalid command. It should be !o or !o 2")
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.channel.name == ALERTS_CHANNEL and message.content.startswith("!e"):
+        try:
+            await message.channel.send(
+                f"We Might Exit Now! Be Ready for the Official Signal. <@&{SUBSCRIBER_ROLE_ID}>"
+            )
+
+        except ValueError:
+            await message.channel.send("❌ Invalid command. It should be !e")
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.content.startswith("!b ") or message.content.startswith("!s "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) < 2:
+                await message.channel.send(
+                    "❌ Please provide a valid margin (e.g., !b 1 or !s 1.5 70580)"
+                )
+                return
+            margin_percent = float(command_parts[1])
+
+            action = "long" if message.content.startswith("!b") else "short"
+
+            if len(command_parts) == 2:
+                price = await get_coinbase_btc_price()
+            if len(command_parts) == 3:
+                price = float(command_parts[2])
+
+            take_profit = price * (1.005 if action == "long" else 0.995)
+            await message.channel.send(
+                format_message(action, price, take_profit, margin_percent)
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid margin. Please provide a valid number (e.g., !b 1 68456 or !s 0.85)"
+            )
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.content.startswith("!rb ") or message.content.startswith("!rs "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 3:
+                await message.channel.send(
+                    "❌ Please provide a valid margin (e.g., !rb 1 70580 or !rs 1.5 70580)"
+                )
+                return
+            margin_percent = float(command_parts[1])
+
+            action = "long" if message.content.startswith("!rb") else "short"
+
+            price = await get_coinbase_btc_price()
+            firstEntry = float(command_parts[2])
+
+            take_profit = ((price + firstEntry) / 2) * (
+                1.005 if action == "long" else 0.995
+            )
+            await message.channel.send(
+                format_message(action, price, take_profit, margin_percent, "ReEntry")
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid margin. Please provide a valid number (e.g., !rb 1 68456 or !rs 0.85 70580)"
+            )
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.content.startswith("!sl "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 3 or command_parts[1] not in ["b", "s"]:
+                await message.channel.send(
+                    "❌ Invalid command. Use !sl b {price} for buy or !sl s {price} for sell"
+                )
+                return
+
+            action = command_parts[1]
+            stop_loss_price = float(command_parts[2])
+
+            await message.channel.send(
+                format_stop_loss_message(action, stop_loss_price)
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid stop loss price. Please provide a valid number (e.g., !sl b 65000)"
+            )
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
+
+    elif message.content.startswith("!tsl "):
+        try:
+            command_parts = message.content.split()
+            if len(command_parts) != 3 or command_parts[1] not in ["b", "s"]:
+                await message.channel.send(
+                    "❌ Invalid command. Use !tsl b {price} for buy or !tsl s {price} for sell"
+                )
+                return
+
+            action = command_parts[1]
+            stop_loss_price = float(command_parts[2])
+
+            await message.channel.send(
+                format_stop_loss_message(action, stop_loss_price, "New Trailing ")
+            )
+
+        except ValueError:
+            await message.channel.send(
+                "❌ Invalid stop loss price. Please provide a valid number (e.g., !tsl b 65000)"
+            )
+
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete messages.")
+        except discord.HTTPException:
+            print("Failed to delete message due to an HTTP error.")
 
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def tsl(ctx, action: str, entry_price: float, stop_loss: float = 0):
-    if ctx.channel.name != SIGNALS_CHANNEL and ctx.channel.name != TEST_CHANNEL:
-        await ctx.send("❌ You can't use this command in this channel.")
-        return
-
-    if action not in ["b", "s"]:
-        await ctx.send("❌ Invalid action. Use `!tsl b {price}` or `!tsl s {price}`.")
-        return
-
-    stop_loss_price = (
-        entry_price * (1 - stop_loss / 100)
-        if action == "b"
-        else entry_price * (1 + stop_loss / 100)
-    )
-
-    await ctx.send(format_trailing_stop_loss_message(action, stop_loss_price))
-    await ctx.message.delete()
-
-
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ You don't have permission to use this command.")
-
-
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-
-async def start_bot():
-    await asyncio.sleep(10)
-    await bot.start(TOKEN)
-
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(
-        app.run_task(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-    )
-    loop.create_task(start_bot())
-    loop.run_forever()
+client.run(TOKEN)
