@@ -30,7 +30,7 @@ async def get_coinbase_eth_price():
         return None
 
 
-def format_message(action, price, take_profit, margin_percent, reEntry=""):
+def format_message(action, price, take_profit, margin_percent, roi, reEntry=""):
     if reEntry == "ReEntry":
         return (
             f"**🔷  Ethereum**\n\n"
@@ -38,7 +38,7 @@ def format_message(action, price, take_profit, margin_percent, reEntry=""):
             f"💥 **Leverage**: Cross 50x\n\n"
             f"⚠️ **Note**: *This is a 2nd entry!*\n"
             f"🔸 **2nd Entry Price**: ${price:.2f}\n"
-            f"🔹 **Take Profit (100% ROI)**: ${take_profit:.2f}\n"
+            f"🔹 **Take Profit ({roi*100}% ROI)**: ${take_profit:.2f}\n"
             f"(*These prices are taken from Coinbase ETH-USD*)\n\n"
             f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n\n"
             f"⚠️ **Stop Loss**: *We'll update very soon*.\n\n\n"
@@ -49,7 +49,7 @@ def format_message(action, price, take_profit, margin_percent, reEntry=""):
         f"📊 **Direction**: {action.upper()}\n"
         f"💥 **Leverage**: Cross 50x\n\n"
         f"🔸 **Entry Price**: ${price:.2f}\n"
-        f"🔹 **Take Profit (100% ROI)**: ${take_profit:.2f}\n"
+        f"🔹 **Take Profit ({roi*100}% ROI)**: ${take_profit:.2f}\n"
         f"(*These prices are taken from Coinbase ETH-USD*)\n\n"
         f"💼 **USE {margin_percent}% MARGIN** of your total capital ✅\n"
         f"⚠️ **Note**: *If we need a 2nd entry, then we'll update.*\n\n"
@@ -241,7 +241,19 @@ async def on_message(message):
 
     elif message.content.startswith("!e"):
         try:
-            await message.channel.send(f"Exit Now!. <@&{SUBSCRIBER_ROLE_ID}>")
+            command_parts = message.content.split()
+            if len(command_parts) > 2:
+                await message.channel.send(
+                    "❌ Invalid command. It should be !e or !e .4"
+                )
+                return
+            if len(command_parts) == 2:
+                percent = float(command_parts[1])
+                await message.channel.send(
+                    f"Exit Now. We Took a Loss on This Trade, Reducing Our Total Capital by {percent}% <@&{SUBSCRIBER_ROLE_ID}>"
+                )
+            else:
+                await message.channel.send(f"Exit Now <@&{SUBSCRIBER_ROLE_ID}>")
 
         except ValueError:
             await message.channel.send("❌ Invalid command. It should be !e")
@@ -263,20 +275,28 @@ async def on_message(message):
             margin_percent = float(command_parts[1])
 
             action = "long" if message.content.startswith("!b") else "short"
+            price = None
+            roi = 1
 
             if len(command_parts) == 2:
                 price = await get_coinbase_eth_price()
             elif len(command_parts) == 3:
-                price = float(command_parts[2])
+                price = await get_coinbase_eth_price()
+                roi = float(command_parts[2])
+            elif len(command_parts) == 4:
+                roi = float(command_parts[2])
+                price = float(command_parts[3])
 
             if price is None:
                 await message.channel.send(
                     "❌ Failed to fetch the price. Please try again later."
                 )
             else:
-                take_profit = price * (1.01 if action == "long" else 0.99)
+                take_profit = price * (
+                    (1 + (roi / 100)) if action == "long" else (1 - (roi / 100))
+                )
                 await message.channel.send(
-                    format_message(action, price, take_profit, margin_percent)
+                    format_message(action, price, take_profit, margin_percent, roi)
                 )
 
         except ValueError:
@@ -315,7 +335,7 @@ async def on_message(message):
                 )
                 await message.channel.send(
                     format_message(
-                        action, price, take_profit, margin_percent, "ReEntry"
+                        action, price, take_profit, margin_percent, 1, "ReEntry"
                     )
                 )
 
