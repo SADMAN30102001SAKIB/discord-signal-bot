@@ -86,14 +86,14 @@ def format_stop_loss_message(action, stop_loss_price, msg_prefix=""):
     if action == "b":
         return (
             f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
-            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f}. 💡\n"
+            f"📉 Exit **if candle closes below** ${stop_loss_price:.2f} on the 5-minute candlestick chart. 💡\n"
             f"(*If the Stop Loss needs to trail or an early exit is required, then we'll notify.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
     elif action == "s":
         return (
             f"🛑 **{msg_prefix}Stop Loss Update**\n\n"
-            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f}. 💡\n"
+            f"📈 Exit **if candle closes above** ${stop_loss_price:.2f} on the 5-minute candlestick chart. 💡\n"
             f"(*If the Stop Loss needs to trail or an early exit is required, then we'll notify.*)\n\n\n"
             f"<@&{SUBSCRIBER_ROLE_ID}>"
         )
