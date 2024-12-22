@@ -75,7 +75,7 @@ def format_alert_message(action, margin_percent, price, reEntry=""):
             f"📊 **Direction**: {action.upper()}\n"
             f"💥 **Leverage**: Cross 50x\n\n"
             f"🔸 **Possible Entry Price**: ${price:.2f}\n"
-            f"(*This price is subject to change and taken from Coinbase BTC-USD*)\n\n"
+            f"(*This price is subject to change and taken from Coinbase ETH-USD*)\n\n"
             f"💼 **Prepare to USE {margin_percent}% MARGIN** if the official signal confirms ✅\n\n"
             f"⚠️ **Note**: *This is just a prediction!*\nSo, prepare yourself & have patience. An official signal might or might not come."
         )
