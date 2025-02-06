@@ -7,7 +7,7 @@ import discord
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-TOKEN = "MTI5ODY0NjAzNzYyMzQ3MjIxMQ.GzH5NJ.LlcTX81prQy3uz5aILsfmx885_n66kWqIJqlAQ"
+TOKEN = ""
 SIGNALS_CHANNEL = "signals"
 TEST_CHANNEL = "test"
 ALERTS_CHANNEL = "alerts"
